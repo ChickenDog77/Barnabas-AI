@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barnabas AI Dashboard — Farragut Christian Church</title>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Libre Franklin', sans-serif; background: #0F172A; color: #E2E8F0; min-height: 100vh; }
+    
+    /* Header */
+    .header { background: linear-gradient(135deg, #1E293B, #334155); padding: 16px 24px; border-bottom: 2px solid #F59E0B; display: flex; justify-content: space-between; align-items: center; }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .header-logo { background: linear-gradient(135deg, #F59E0B, #D97706); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: #0F172A; }
+    .header h1 { font-family: 'Playfair Display', serif; font-size: 22px; color: #FFF; }
+    .header .church { color: #64748B; font-size: 12px; }
+    
+    /* Tabs */
+    .tabs { display: flex; background: #1E293B; border-bottom: 1px solid #334155; overflow-x: auto; }
+    .tab { padding: 12px 20px; font-size: 13px; font-weight: 600; color: #64748B; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; }
+    .tab:hover { color: #94A3B8; }
+    .tab.active { color: #F59E0B; border-bottom-color: #F59E0B; }
+    
+    /* Content */
+    .content { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    
+    /* Common */
+    .card { background: rgba(255,255,255,0.04); border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .card-title { font-family: 'Playfair Display', serif; font-size: 18px; color: #FFF; }
+    .btn { padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #F59E0B, #D97706); color: #0F172A; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-edit { background: #334155; color: #94A3B8; }
+    .btn-delete { background: rgba(239,68,68,0.1); color: #EF4444; border: 1px solid rgba(239,68,68,0.3); }
+    .btn-save { background: #10B981; color: #FFF; }
+    .btn-cancel { background: #475569; color: #E2E8F0; }
+    
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 12px; color: #94A3B8; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 1px solid #334155; }
+    td { padding: 10px 12px; border-bottom: 1px solid rgba(51,65,85,0.5); color: #CBD5E1; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+    .empty-cell { color: #475569; font-style: italic; }
+    
+    /* Forms */
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: #94A3B8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 10px 12px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; font-size: 14px; color: #FFF; font-family: inherit; outline: none; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: rgba(245,158,11,0.5); }
+    .form-input::placeholder, .form-textarea::placeholder { color: rgba(255,255,255,0.25); }
+    .form-select { appearance: auto; }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-actions { display: flex; gap: 8px; margin-top: 16px; }
+    
+    /* Modal overlay */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 28px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal h3 { font-family: 'Playfair Display', serif; font-size: 18px; color: #FFF; margin-bottom: 16px; }
+    
+    /* Badge */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: rgba(16,185,129,0.15); color: #10B981; }
+    .badge-red { background: rgba(239,68,68,0.15); color: #EF4444; }
+    .badge-yellow { background: rgba(245,158,11,0.15); color: #F59E0B; }
+    .badge-gray { background: rgba(148,163,184,0.15); color: #94A3B8; }
+    .badge-blue { background: rgba(59,130,246,0.15); color: #3B82F6; }
+    
+    /* Stats row */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat { background: rgba(255,255,255,0.04); border: 1px solid #334155; border-radius: 10px; padding: 14px 18px; }
+    .stat-value { font-size: 28px; font-weight: 700; color: #FFF; }
+    .stat-label { font-size: 11px; color: #64748B; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+    
+    /* Search */
+    .search-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+    .search-bar input { flex: 1; }
+    
+    /* Month filter */
+    .month-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .month-pill { padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 500; cursor: pointer; background: #334155; color: #94A3B8; border: none; font-family: inherit; transition: all 0.15s; }
+    .month-pill.active { background: #F59E0B; color: #0F172A; }
+    
+    /* Log entry */
+    .log-entry { padding: 12px 0; border-bottom: 1px solid rgba(51,65,85,0.5); }
+    .log-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+    .log-time { font-size: 11px; color: #64748B; }
+    .log-text { font-size: 14px; color: #CBD5E1; line-height: 1.5; }
+    
+    /* Demo section */
+    .demo-card { max-width: 440px; }
+    .demo-card .code-input { text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 18px; }
+    
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: #64748B; }
+    .success-msg { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 10px 14px; color: #10B981; font-size: 13px; margin-bottom: 16px; }
+    .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 10px 14px; color: #FCA5A5; font-size: 13px; margin-bottom: 16px; }
+    
+    @media (max-width: 640px) {
+      .form-row { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">BA</div>
+      <div>
+        <h1>Barnabas Dashboard</h1>
+        <div class="church">Farragut Christian Church</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('schedule')">Schedule</div>
+    <div class="tab" onclick="switchTab('contacts')">Contacts</div>
+    <div class="tab" onclick="switchTab('messages')">Messages</div>
+    <div class="tab" onclick="switchTab('knowledge')">Knowledge</div>
+    <div class="tab" onclick="switchTab('demo')">Demo</div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- SCHEDULE PANEL -->
+    <div id="panel-schedule" class="panel active">
+      <div class="stats" id="schedule-stats"></div>
+      <div class="month-pills" id="month-pills"></div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">2026 Volunteer Schedule</div>
+          <button class="btn btn-primary" onclick="showAddSchedule()">+ Add Sunday</button>
+        </div>
+        <div id="schedule-table"><div class="loading">Loading schedule...</div></div>
+      </div>
+    </div>
+
+    <!-- CONTACTS PANEL -->
+    <div id="panel-contacts" class="panel">
+      <div class="stats" id="contacts-stats"></div>
+      <div class="search-bar">
+        <input type="text" class="form-input" placeholder="Search contacts..." id="contacts-search" oninput="renderContacts()">
+        <button class="btn btn-primary" onclick="showAddContact()">+ Add Contact</button>
+      </div>
+      <div class="card">
+        <div id="contacts-table"><div class="loading">Loading contacts...</div></div>
+      </div>
+    </div>
+
+    <!-- MESSAGES PANEL -->
+    <div id="panel-messages" class="panel">
+      <div class="stats" id="messages-stats"></div>
+      <div class="search-bar">
+        <input type="text" class="form-input" placeholder="Search messages..." id="messages-search" oninput="renderMessages()">
+      </div>
+      <div class="card">
+        <div id="messages-list"><div class="loading">Loading messages...</div></div>
+      </div>
+    </div>
+
+    <!-- KNOWLEDGE PANEL -->
+    <div id="panel-knowledge" class="panel">
+      <div class="stats" id="knowledge-stats"></div>
+      <div class="search-bar">
+        <input type="text" class="form-input" placeholder="Search knowledge base..." id="knowledge-search" oninput="renderKnowledge()">
+        <button class="btn btn-primary" onclick="showAddKnowledge()">+ Teach Barnabas</button>
+      </div>
+      <div id="knowledge-list"><div class="loading">Loading knowledge base...</div></div>
+    </div>
+
+    <!-- DEMO PANEL -->
+    <div id="panel-demo" class="panel">
+      <div class="card demo-card">
+        <div class="card-title" style="margin-bottom:12px;">Send Barnabas Demo</div>
+        <p style="color:#64748B;font-size:13px;line-height:1.5;margin-bottom:20px;">
+          Enter a name and phone number. Barnabas will create a group text conversation — perfect for showing off the system.
+        </p>
+        <div id="demo-msg"></div>
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input type="text" class="form-input" id="demo-name" placeholder="Jason">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-input" id="demo-phone" placeholder="(865) 555-1234" maxlength="14" oninput="formatPhoneField(this)">
+        </div>
+        <button class="btn btn-primary" id="demo-btn" onclick="sendDemo()" style="width:100%;padding:12px;">Send Barnabas Demo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+  <script>
+    const SB_URL = "https://ehkfjlvufxrwtkomcqur.supabase.co";
+    const SB_KEY = "sb_publishable_t6zQrTT9Iina7KR_JteD2w_DBnZ1zeZ";
+    const DEMO_WEBHOOK = "https://chickendog.app.n8n.cloud/webhook/ai-ben-demo";
+    const headers = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=representation" };
+
+    let scheduleData = [], contactsData = [], messagesData = [], knowledgeData = [];
+    let activeMonth = "All";
+
+    // ========= TAB SWITCHING =========
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', t.textContent.toLowerCase() === tab);
+      });
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + tab).classList.add('active');
+      if (tab === 'schedule') loadSchedule();
+      if (tab === 'contacts') loadContacts();
+      if (tab === 'messages') loadMessages();
+      if (tab === 'knowledge') loadKnowledge();
+    }
+
+    // ========= SUPABASE HELPERS =========
+    async function sbGet(table, query = '') {
+      const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY } });
+      return res.json();
+    }
+    async function sbPost(table, data) {
+      const res = await fetch(`${SB_URL}/rest/v1/${table}`, { method: 'POST', headers, body: JSON.stringify(data) });
+      return res.json();
+    }
+    async function sbPatch(table, id, data) {
+      const res = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers, body: JSON.stringify(data) });
+      return res.json();
+    }
+    async function sbDelete(table, id) {
+      await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers });
+    }
+
+    // ========= SCHEDULE =========
+    async function loadSchedule() {
+      scheduleData = await sbGet('volunteer_schedule', 'order=sunday_date.asc');
+      renderScheduleStats();
+      renderMonthPills();
+      renderSchedule();
+    }
+    function renderScheduleStats() {
+      const filled = scheduleData.filter(s => s.assigned_person).length;
+      const empty = scheduleData.filter(s => !s.assigned_person).length;
+      const months = [...new Set(scheduleData.map(s => s.month))].length;
+      document.getElementById('schedule-stats').innerHTML = `
+        <div class="stat"><div class="stat-value">${scheduleData.length}</div><div class="stat-label">Total Sundays</div></div>
+        <div class="stat"><div class="stat-value">${filled}</div><div class="stat-label">Filled</div></div>
+        <div class="stat"><div class="stat-value" style="color:#EF4444">${empty}</div><div class="stat-label">Unfilled</div></div>
+        <div class="stat"><div class="stat-value">${months}</div><div class="stat-label">Months</div></div>
+      `;
+    }
+    function renderMonthPills() {
+      const months = ['All', ...new Set(scheduleData.map(s => s.month).filter(Boolean))];
+      document.getElementById('month-pills').innerHTML = months.map(m =>
+        `<button class="month-pill ${m === activeMonth ? 'active' : ''}" onclick="filterMonth('${m}')">${m}</button>`
+      ).join('');
+    }
+    function filterMonth(m) { activeMonth = m; renderMonthPills(); renderSchedule(); }
+    function renderSchedule() {
+      const filtered = activeMonth === 'All' ? scheduleData : scheduleData.filter(s => s.month === activeMonth);
+      if (!filtered.length) { document.getElementById('schedule-table').innerHTML = '<p style="color:#64748B;text-align:center;padding:20px;">No entries found.</p>'; return; }
+      let html = '<table><thead><tr><th>Date</th><th>Month</th><th>Opening</th><th>Welcome 1st</th><th>Welcome 2nd</th><th></th></tr></thead><tbody>';
+      filtered.forEach(s => {
+        const empty = !s.assigned_person;
+        html += `<tr>
+          <td>${s.sunday_date}</td>
+          <td>${s.month || ''}</td>
+          <td>${s.assigned_person || '<span class="empty-cell">unfilled</span>'}</td>
+          <td>${s.welcome_1st_hour || '<span class="empty-cell">unfilled</span>'}</td>
+          <td>${s.welcome_2nd_hour || '<span class="empty-cell">unfilled</span>'}</td>
+          <td><button class="btn btn-sm btn-edit" onclick="showEditSchedule(${s.id})">Edit</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('schedule-table').innerHTML = html;
+    }
+    function showAddSchedule() {
+      const volunteers = contactsData.filter(c => c.has_done_before).map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      document.getElementById('modal-content').innerHTML = `
+        <h3>Add Sunday</h3>
+        <div class="form-group"><label class="form-label">Date (MM-DD-YYYY)</label><input class="form-input" id="m-date" placeholder="06-07-2026"></div>
+        <div class="form-group"><label class="form-label">Month</label><input class="form-input" id="m-month" placeholder="June"></div>
+        <div class="form-group"><label class="form-label">Assigned Person</label><select class="form-select" id="m-person"><option value="">Select...</option>${volunteers}</select></div>
+        <div class="form-actions">
+          <button class="btn btn-save" onclick="addScheduleEntry()">Add</button>
+          <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        </div>`;
+      openModal();
+    }
+    function showEditSchedule(id) {
+      const s = scheduleData.find(x => x.id === id);
+      const allNames = contactsData.map(c => `<option value="${c.name}" ${c.name === s.assigned_person ? 'selected' : ''}>${c.name}</option>`).join('');
+      document.getElementById('modal-content').innerHTML = `
+        <h3>Edit ${s.sunday_date}</h3>
+        <div class="form-group"><label class="form-label">Opening the Church</label><select class="form-select" id="m-person"><option value="">Select...</option>${allNames}</select></div>
+        <div class="form-group"><label class="form-label">Welcome 1st Hour</label><select class="form-select" id="m-w1"><option value="">Select...</option>${allNames}</select></div>
+        <div class="form-group"><label class="form-label">Welcome 2nd Hour</label><select class="form-select" id="m-w2"><option value="">Select...</option>${allNames}</select></div>
+        <div class="form-actions">
+          <button class="btn btn-save" onclick="updateScheduleEntry(${id})">Save</button>
+          <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        </div>`;
+      document.getElementById('m-person').value = s.assigned_person || '';
+      document.getElementById('m-w1').value = s.welcome_1st_hour || '';
+      document.getElementById('m-w2').value = s.welcome_2nd_hour || '';
+      openModal();
+    }
+    async function addScheduleEntry() {
+      const person = document.getElementById('m-person').value;
+      await sbPost('volunteer_schedule', {
+        sunday_date: document.getElementById('m-date').value,
+        month: document.getElementById('m-month').value,
+        assigned_person: person, welcome_1st_hour: person, welcome_2nd_hour: person
+      });
+      closeModal(); loadSchedule();
+    }
+    async function updateScheduleEntry(id) {
+      await sbPatch('volunteer_schedule', id, {
+        assigned_person: document.getElementById('m-person').value,
+        welcome_1st_hour: document.getElementById('m-w1').value,
+        welcome_2nd_hour: document.getElementById('m-w2').value
+      });
+      closeModal(); loadSchedule();
+    }
+
+    // ========= CONTACTS =========
+    async function loadContacts() {
+      contactsData = await sbGet('contacts', 'order=name.asc');
+      renderContactsStats();
+      renderContacts();
+    }
+    function renderContactsStats() {
+      const experienced = contactsData.filter(c => c.has_done_before).length;
+      const withPhone = contactsData.filter(c => c.phone).length;
+      document.getElementById('contacts-stats').innerHTML = `
+        <div class="stat"><div class="stat-value">${contactsData.length}</div><div class="stat-label">Total Contacts</div></div>
+        <div class="stat"><div class="stat-value">${experienced}</div><div class="stat-label">Experienced</div></div>
+        <div class="stat"><div class="stat-value">${withPhone}</div><div class="stat-label">Have Phone</div></div>
+        <div class="stat"><div class="stat-value" style="color:#EF4444">${contactsData.length - withPhone}</div><div class="stat-label">Missing Phone</div></div>
+      `;
+    }
+    function renderContacts() {
+      const q = (document.getElementById('contacts-search')?.value || '').toLowerCase();
+      const filtered = contactsData.filter(c => c.name.toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q));
+      let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Experienced</th><th>Role</th><th></th></tr></thead><tbody>';
+      filtered.forEach(c => {
+        html += `<tr>
+          <td>${c.name}</td>
+          <td style="font-size:12px">${c.email || '<span class="empty-cell">—</span>'}</td>
+          <td>${c.phone || '<span class="empty-cell">missing</span>'}</td>
+          <td>${c.has_done_before ? '<span class="badge badge-green">Yes</span>' : '<span class="badge badge-gray">No</span>'}</td>
+          <td><span class="badge badge-blue">${c.role || 'member'}</span></td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-sm btn-edit" onclick="showEditContact(${c.id})">Edit</button>
+            <button class="btn btn-sm btn-delete" onclick="deleteContact(${c.id})">Del</button>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('contacts-table').innerHTML = html;
+    }
+    function showAddContact() {
+      document.getElementById('modal-content').innerHTML = `
+        <h3>Add Contact</h3>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="m-name"></div>
+          <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="m-phone" placeholder="(865) 555-1234"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="m-email"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Experienced?</label><select class="form-select" id="m-exp"><option value="false">No</option><option value="true">Yes</option></select></div>
+          <div class="form-group"><label class="form-label">Role</label><select class="form-select" id="m-role"><option value="member">Member</option><option value="volunteer">Volunteer</option><option value="staff">Staff</option></select></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-save" onclick="addContact()">Add</button>
+          <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        </div>`;
+      openModal();
+    }
+    function showEditContact(id) {
+      const c = contactsData.find(x => x.id === id);
+      document.getElementById('modal-content').innerHTML = `
+        <h3>Edit ${c.name}</h3>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="m-name" value="${c.name}"></div>
+          <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="m-phone" value="${c.phone || ''}"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="m-email" value="${c.email || ''}"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Experienced?</label><select class="form-select" id="m-exp"><option value="false" ${!c.has_done_before?'selected':''}>No</option><option value="true" ${c.has_done_before?'selected':''}>Yes</option></select></div>
+          <div class="form-group"><label class="form-label">Role</label><select class="form-select" id="m-role"><option value="member" ${c.role==='member'?'selected':''}>Member</option><option value="volunteer" ${c.role==='volunteer'?'selected':''}>Volunteer</option><option value="staff" ${c.role==='staff'?'selected':''}>Staff</option></select></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-save" onclick="updateContact(${id})">Save</button>
+          <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        </div>`;
+      openModal();
+    }
+    async function addContact() {
+      await sbPost('contacts', {
+        name: document.getElementById('m-name').value,
+        phone: document.getElementById('m-phone').value,
+        email: document.getElementById('m-email').value,
+        has_done_before: document.getElementById('m-exp').value === 'true',
+        role: document.getElementById('m-role').value
+      });
+      closeModal(); loadContacts();
+    }
+    async function updateContact(id) {
+      await sbPatch('contacts', id, {
+        name: document.getElementById('m-name').value,
+        phone: document.getElementById('m-phone').value,
+        email: document.getElementById('m-email').value,
+        has_done_before: document.getElementById('m-exp').value === 'true',
+        role: document.getElementById('m-role').value
+      });
+      closeModal(); loadContacts();
+    }
+    async function deleteContact(id) {
+      if (!confirm('Delete this contact?')) return;
+      await sbDelete('contacts', id);
+      loadContacts();
+    }
+
+    // ========= MESSAGES =========
+    async function loadMessages() {
+      messagesData = await sbGet('message_log', 'order=sent_at.desc&limit=100');
+      renderMessagesStats();
+      renderMessages();
+    }
+    function renderMessagesStats() {
+      const outbound = messagesData.filter(m => m.direction === 'outbound').length;
+      const inbound = messagesData.filter(m => m.direction === 'inbound').length;
+      const confirmed = messagesData.filter(m => m.status === 'confirmed').length;
+      const declined = messagesData.filter(m => m.status === 'declined').length;
+      document.getElementById('messages-stats').innerHTML = `
+        <div class="stat"><div class="stat-value">${messagesData.length}</div><div class="stat-label">Total Messages</div></div>
+        <div class="stat"><div class="stat-value">${outbound}</div><div class="stat-label">Outbound</div></div>
+        <div class="stat"><div class="stat-value">${inbound}</div><div class="stat-label">Inbound</div></div>
+        <div class="stat"><div class="stat-value" style="color:#10B981">${confirmed}</div><div class="stat-label">Confirmed</div></div>
+      `;
+    }
+    function renderMessages() {
+      const q = (document.getElementById('messages-search')?.value || '').toLowerCase();
+      const filtered = messagesData.filter(m => (m.volunteer_name || '').toLowerCase().includes(q) || (m.message_text || '').toLowerCase().includes(q));
+      if (!filtered.length) { document.getElementById('messages-list').innerHTML = '<p style="color:#64748B;text-align:center;padding:20px;">No messages yet.</p>'; return; }
+      let html = '<table><thead><tr><th>Time</th><th>Name</th><th>Direction</th><th>Message</th><th>Status</th></tr></thead><tbody>';
+      filtered.forEach(m => {
+        const time = m.sent_at ? new Date(m.sent_at).toLocaleString() : '—';
+        const dir = m.direction === 'outbound' ? '<span class="badge badge-blue">Out</span>' : '<span class="badge badge-yellow">In</span>';
+        let statusBadge = '<span class="badge badge-gray">' + (m.status || '—') + '</span>';
+        if (m.status === 'confirmed') statusBadge = '<span class="badge badge-green">confirmed</span>';
+        if (m.status === 'declined') statusBadge = '<span class="badge badge-red">declined</span>';
+        const msgShort = (m.message_text || '').substring(0, 80) + ((m.message_text || '').length > 80 ? '...' : '');
+        html += `<tr><td style="white-space:nowrap;font-size:11px">${time}</td><td>${m.volunteer_name || '—'}</td><td>${dir}</td><td style="font-size:12px">${msgShort}</td><td>${statusBadge}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('messages-list').innerHTML = html;
+    }
+
+    // ========= KNOWLEDGE =========
+    const CATEGORIES = ['general','sunday_schedule','first_visit','worship_style','youth','kids','online','ministries','volunteer_duties','volunteer_procedures','app','contact','events','ai_ben_rules','custom'];
+    function catLabel(c) { return c.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase()); }
+    function catColor(c) {
+      const m = {general:'yellow',sunday_schedule:'blue',first_visit:'green',worship_style:'blue',youth:'yellow',kids:'yellow',volunteer_duties:'red',volunteer_procedures:'red',ai_ben_rules:'green',events:'blue',contact:'gray'};
+      return m[c] || 'gray';
+    }
+    async function loadKnowledge() {
+      knowledgeData = await sbGet('church_knowledge', 'order=category.asc');
+      renderKnowledgeStats();
+      renderKnowledge();
+    }
+    function renderKnowledgeStats() {
+      const cats = new Set(knowledgeData.map(k => k.category)).size;
+      document.getElementById('knowledge-stats').innerHTML = `
+        <div class="stat"><div class="stat-value">${knowledgeData.length}</div><div class="stat-label">Entries</div></div>
+        <div class="stat"><div class="stat-value">${cats}</div><div class="stat-label">Categories</div></div>
+      `;
+    }
+    function renderKnowledge() {
+      const q = (document.getElementById('knowledge-search')?.value || '').toLowerCase();
+      const filtered = knowledgeData.filter(k => k.category.toLowerCase().includes(q) || k.content.toLowerCase().includes(q));
+      if (!filtered.length) { document.getElementById('knowledge-list').innerHTML = '<p style="color:#64748B;text-align:center;padding:40px;">No entries found.</p>'; return; }
+      document.getElementById('knowledge-list').innerHTML = filtered.map(k => `
+        <div class="card" style="border-left:3px solid ${catColor(k.category)==='yellow'?'#F59E0B':catColor(k.category)==='blue'?'#3B82F6':catColor(k.category)==='green'?'#10B981':catColor(k.category)==='red'?'#EF4444':'#64748B'}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <span class="badge badge-${catColor(k.category)}">${catLabel(k.category)}</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm btn-edit" onclick="showEditKnowledge(${k.id})">Edit</button>
+              <button class="btn btn-sm btn-delete" onclick="deleteKnowledge(${k.id})">Del</button>
+            </div>
+          </div>
+          <p style="font-size:13px;line-height:1.6;color:#CBD5E1">${k.content}</p>
+        </div>
+      `).join('');
+    }
+    function showAddKnowledge() {
+      const opts = CATEGORIES.map(c => `<option value="${c}">${catLabel(c)}</option>`).join('');
+      document.getElementById('modal-content').innerHTML = `
+        <h3>Teach Barnabas</h3>
+        <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-cat">${opts}</select></div>
+        <div class="form-group"><label class="form-label">What should Barnabas know?</label><textarea class="form-textarea" id="m-content" rows="5" placeholder="Write naturally, like explaining to a new volunteer..."></textarea></div>
+        <div class="form-actions">
+          <button class="btn btn-save" onclick="addKnowledge()">Add</button>
+          <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        </div>`;
+      openModal();
+    }
+    function showEditKnowledge(id) {
+      const k = knowledgeData.find(x => x.id === id);
+      const opts = CATEGORIES.map(c => `<option value="${c}" ${c===k.category?'selected':''}>${catLabel(c)}</option>`).join('');
+      document.getElementById('modal-content').innerHTML = `
+        <h3>Edit Entry</h3>
+        <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-cat">${opts}</select></div>
+        <div class="form-group"><label class="form-label">Content</label><textarea class="form-textarea" id="m-content" rows="5">${k.content}</textarea></div>
+        <div class="form-actions">
+          <button class="btn btn-save" onclick="updateKnowledge(${id})">Save</button>
+          <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        </div>`;
+      openModal();
+    }
+    async function addKnowledge() {
+      await sbPost('church_knowledge', { category: document.getElementById('m-cat').value, content: document.getElementById('m-content').value });
+      closeModal(); loadKnowledge();
+    }
+    async function updateKnowledge(id) {
+      await sbPatch('church_knowledge', id, { category: document.getElementById('m-cat').value, content: document.getElementById('m-content').value, last_updated: new Date().toISOString() });
+      closeModal(); loadKnowledge();
+    }
+    async function deleteKnowledge(id) {
+      if (!confirm('Delete this entry? Barnabas will no longer know this.')) return;
+      await sbDelete('church_knowledge', id);
+      loadKnowledge();
+    }
+
+    // ========= DEMO =========
+    function formatPhoneField(input) {
+      const d = input.value.replace(/\D/g, '');
+      if (d.length <= 3) input.value = d;
+      else if (d.length <= 6) input.value = `(${d.slice(0,3)}) ${d.slice(3)}`;
+      else input.value = `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6,10)}`;
+    }
+    async function sendDemo() {
+      const name = document.getElementById('demo-name').value.trim();
+      const phoneRaw = document.getElementById('demo-phone').value;
+      const digits = phoneRaw.replace(/\D/g, '');
+      if (!name) { document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Enter a first name.</div>'; return; }
+      if (digits.length !== 10) { document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Enter a valid 10-digit phone number.</div>'; return; }
+      const phone = '+1' + digits;
+      document.getElementById('demo-btn').textContent = 'Sending...';
+      document.getElementById('demo-btn').disabled = true;
+      try {
+        const res = await fetch(DEMO_WEBHOOK, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({firstName:name, phone:phone}) });
+        if (res.ok) {
+          document.getElementById('demo-msg').innerHTML = `<div class="success-msg">Demo sent to ${name}! They should receive a group text in a few seconds. Have them reply YES/NO or ask a question.</div>`;
+          document.getElementById('demo-name').value = '';
+          document.getElementById('demo-phone').value = '';
+        } else {
+          document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Something went wrong. Check that the demo workflow is active in n8n.</div>';
+        }
+      } catch(e) {
+        document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Could not reach n8n. Check your connection.</div>';
+      }
+      document.getElementById('demo-btn').textContent = 'Send Barnabas Demo';
+      document.getElementById('demo-btn').disabled = false;
+    }
+
+    // ========= MODAL =========
+    function openModal() { document.getElementById('modal').classList.add('show'); }
+    function closeModal() { document.getElementById('modal').classList.remove('show'); }
+    document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+    // ========= INIT =========
+    loadSchedule();
+    loadContacts();
+  </script>
+</body>
+</html>
