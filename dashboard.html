@@ -249,7 +249,7 @@
     const SB_KEY = "sb_publishable_t6zQrTT9Iina7KR_JteD2w_DBnZ1zeZ";
     const DEMO_WEBHOOK = "https://chickendog.app.n8n.cloud/webhook/ai-ben-demo";
 
-    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+    const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
     let authToken = SB_KEY;
     const headers = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=representation" };
 
@@ -260,7 +260,7 @@
 
     // ========= AUTH =========
     async function checkAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await sbClient.auth.getSession();
       if (session) {
         updateAuthHeaders(session.access_token);
         showDashboard();
@@ -275,7 +275,7 @@
       }
       document.getElementById('login-btn').textContent = 'Signing in...';
       document.getElementById('login-btn').disabled = true;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
       document.getElementById('login-btn').textContent = 'Sign In';
       document.getElementById('login-btn').disabled = false;
       if (error) {
@@ -286,7 +286,7 @@
       showDashboard();
     }
     async function doLogout() {
-      await supabase.auth.signOut();
+      await sbClient.auth.signOut();
       updateAuthHeaders(SB_KEY);
       document.getElementById('dashboard-wrap').style.display = 'none';
       document.getElementById('login-screen').style.display = 'flex';
@@ -304,7 +304,7 @@
     }
 
     // Listen for token refresh
-    supabase.auth.onAuthStateChange((event, session) => {
+    sbClient.auth.onAuthStateChange((event, session) => {
       if (session) {
         updateAuthHeaders(session.access_token);
       }
