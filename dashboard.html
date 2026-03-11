@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Barnabas AI Dashboard — Farragut Christian Church</title>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://ehkfjlvufxrwtkomcqur.supabase.co https://chickendog.app.n8n.cloud; img-src 'self' data:;">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Libre Franklin', sans-serif; background: #0F172A; color: #E2E8F0; min-height: 100vh; }
@@ -249,6 +250,12 @@
     const SB_KEY = "sb_publishable_t6zQrTT9Iina7KR_JteD2w_DBnZ1zeZ";
     const DEMO_WEBHOOK = "https://chickendog.app.n8n.cloud/webhook/ai-ben-demo";
 
+    // HTML sanitization to prevent XSS
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
     const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
     let authToken = SB_KEY;
     const headers = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=representation" };
@@ -328,7 +335,7 @@
 
     // ========= SUPABASE HELPERS =========
     async function sbGet(table, query = '') {
-      const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY } });
+      const res = await fetch(`${SB_URL}/rest/v1/${table}?${query}`, { headers });
       return res.json();
     }
     async function sbPost(table, data) {
@@ -373,21 +380,20 @@
       if (!filtered.length) { document.getElementById('schedule-table').innerHTML = '<p style="color:#64748B;text-align:center;padding:20px;">No entries found.</p>'; return; }
       let html = '<table><thead><tr><th>Date</th><th>Month</th><th>Opening</th><th>Welcome 1st</th><th>Welcome 2nd</th><th></th></tr></thead><tbody>';
       filtered.forEach(s => {
-        const empty = !s.assigned_person;
         html += `<tr>
-          <td>${s.sunday_date}</td>
-          <td>${s.month || ''}</td>
-          <td>${s.assigned_person || '<span class="empty-cell">unfilled</span>'}</td>
-          <td>${s.welcome_1st_hour || '<span class="empty-cell">unfilled</span>'}</td>
-          <td>${s.welcome_2nd_hour || '<span class="empty-cell">unfilled</span>'}</td>
-          <td><button class="btn btn-sm btn-edit" onclick="showEditSchedule(${s.id})">Edit</button></td>
+          <td>${esc(s.sunday_date)}</td>
+          <td>${esc(s.month)}</td>
+          <td>${s.assigned_person ? esc(s.assigned_person) : '<span class="empty-cell">unfilled</span>'}</td>
+          <td>${s.welcome_1st_hour ? esc(s.welcome_1st_hour) : '<span class="empty-cell">unfilled</span>'}</td>
+          <td>${s.welcome_2nd_hour ? esc(s.welcome_2nd_hour) : '<span class="empty-cell">unfilled</span>'}</td>
+          <td><button class="btn btn-sm btn-edit" onclick="showEditSchedule(${parseInt(s.id)})">Edit</button></td>
         </tr>`;
       });
       html += '</tbody></table>';
       document.getElementById('schedule-table').innerHTML = html;
     }
     function showAddSchedule() {
-      const volunteers = contactsData.filter(c => c.has_done_before).map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      const volunteers = contactsData.filter(c => c.has_done_before).map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
       document.getElementById('modal-content').innerHTML = `
         <h3>Add Sunday</h3>
         <div class="form-group"><label class="form-label">Date (MM-DD-YYYY)</label><input class="form-input" id="m-date" placeholder="06-07-2026"></div>
@@ -401,7 +407,7 @@
     }
     function showEditSchedule(id) {
       const s = scheduleData.find(x => x.id === id);
-      const allNames = contactsData.map(c => `<option value="${c.name}" ${c.name === s.assigned_person ? 'selected' : ''}>${c.name}</option>`).join('');
+      const allNames = contactsData.map(c => `<option value="${esc(c.name)}" ${c.name === s.assigned_person ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
       document.getElementById('modal-content').innerHTML = `
         <h3>Edit ${s.sunday_date}</h3>
         <div class="form-group"><label class="form-label">Opening the Church</label><select class="form-select" id="m-person"><option value="">Select...</option>${allNames}</select></div>
@@ -456,14 +462,14 @@
       let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Experienced</th><th>Role</th><th></th></tr></thead><tbody>';
       filtered.forEach(c => {
         html += `<tr>
-          <td>${c.name}</td>
-          <td style="font-size:12px">${c.email || '<span class="empty-cell">—</span>'}</td>
-          <td>${c.phone || '<span class="empty-cell">missing</span>'}</td>
+          <td>${esc(c.name)}</td>
+          <td style="font-size:12px">${c.email ? esc(c.email) : '<span class="empty-cell">—</span>'}</td>
+          <td>${c.phone ? esc(c.phone) : '<span class="empty-cell">missing</span>'}</td>
           <td>${c.has_done_before ? '<span class="badge badge-green">Yes</span>' : '<span class="badge badge-gray">No</span>'}</td>
-          <td><span class="badge badge-blue">${c.role || 'member'}</span></td>
+          <td><span class="badge badge-blue">${esc(c.role) || 'member'}</span></td>
           <td style="white-space:nowrap">
-            <button class="btn btn-sm btn-edit" onclick="showEditContact(${c.id})">Edit</button>
-            <button class="btn btn-sm btn-delete" onclick="deleteContact(${c.id})">Del</button>
+            <button class="btn btn-sm btn-edit" onclick="showEditContact(${parseInt(c.id)})">Edit</button>
+            <button class="btn btn-sm btn-delete" onclick="deleteContact(${parseInt(c.id)})">Del</button>
           </td>
         </tr>`;
       });
@@ -491,12 +497,12 @@
     function showEditContact(id) {
       const c = contactsData.find(x => x.id === id);
       document.getElementById('modal-content').innerHTML = `
-        <h3>Edit ${c.name}</h3>
+        <h3>Edit ${esc(c.name)}</h3>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="m-name" value="${c.name}"></div>
-          <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="m-phone" value="${c.phone || ''}"></div>
+          <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="m-name" value="${esc(c.name)}"></div>
+          <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="m-phone" value="${esc(c.phone)}"></div>
         </div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="m-email" value="${c.email || ''}"></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="m-email" value="${esc(c.email)}"></div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">Experienced?</label><select class="form-select" id="m-exp"><option value="false" ${!c.has_done_before?'selected':''}>No</option><option value="true" ${c.has_done_before?'selected':''}>Yes</option></select></div>
           <div class="form-group"><label class="form-label">Role</label><select class="form-select" id="m-role"><option value="member" ${c.role==='member'?'selected':''}>Member</option><option value="volunteer" ${c.role==='volunteer'?'selected':''}>Volunteer</option><option value="staff" ${c.role==='staff'?'selected':''}>Staff</option></select></div>
@@ -563,7 +569,7 @@
         if (m.status === 'confirmed') statusBadge = '<span class="badge badge-green">confirmed</span>';
         if (m.status === 'declined') statusBadge = '<span class="badge badge-red">declined</span>';
         const msgShort = (m.message_text || '').substring(0, 80) + ((m.message_text || '').length > 80 ? '...' : '');
-        html += `<tr><td style="white-space:nowrap;font-size:11px">${time}</td><td>${m.volunteer_name || '—'}</td><td>${dir}</td><td style="font-size:12px">${msgShort}</td><td>${statusBadge}</td></tr>`;
+        html += `<tr><td style="white-space:nowrap;font-size:11px">${esc(time)}</td><td>${esc(m.volunteer_name) || '—'}</td><td>${dir}</td><td style="font-size:12px">${esc(msgShort)}</td><td>${statusBadge}</td></tr>`;
       });
       html += '</tbody></table>';
       document.getElementById('messages-list').innerHTML = html;
@@ -595,13 +601,13 @@
       document.getElementById('knowledge-list').innerHTML = filtered.map(k => `
         <div class="card" style="border-left:3px solid ${catColor(k.category)==='yellow'?'#F59E0B':catColor(k.category)==='blue'?'#3B82F6':catColor(k.category)==='green'?'#10B981':catColor(k.category)==='red'?'#EF4444':'#64748B'}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-            <span class="badge badge-${catColor(k.category)}">${catLabel(k.category)}</span>
+            <span class="badge badge-${catColor(k.category)}">${esc(catLabel(k.category))}</span>
             <div style="display:flex;gap:6px">
-              <button class="btn btn-sm btn-edit" onclick="showEditKnowledge(${k.id})">Edit</button>
-              <button class="btn btn-sm btn-delete" onclick="deleteKnowledge(${k.id})">Del</button>
+              <button class="btn btn-sm btn-edit" onclick="showEditKnowledge(${parseInt(k.id)})">Edit</button>
+              <button class="btn btn-sm btn-delete" onclick="deleteKnowledge(${parseInt(k.id)})">Del</button>
             </div>
           </div>
-          <p style="font-size:13px;line-height:1.6;color:#CBD5E1">${k.content}</p>
+          <p style="font-size:13px;line-height:1.6;color:#CBD5E1">${esc(k.content)}</p>
         </div>
       `).join('');
     }
@@ -623,7 +629,7 @@
       document.getElementById('modal-content').innerHTML = `
         <h3>Edit Entry</h3>
         <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-cat">${opts}</select></div>
-        <div class="form-group"><label class="form-label">Content</label><textarea class="form-textarea" id="m-content" rows="5">${k.content}</textarea></div>
+        <div class="form-group"><label class="form-label">Content</label><textarea class="form-textarea" id="m-content" rows="5">${esc(k.content)}</textarea></div>
         <div class="form-actions">
           <button class="btn btn-save" onclick="updateKnowledge(${id})">Save</button>
           <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -663,7 +669,7 @@
       try {
         const res = await fetch(DEMO_WEBHOOK, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({firstName:name, phone:phone}) });
         if (res.ok) {
-          document.getElementById('demo-msg').innerHTML = `<div class="success-msg">Demo sent to ${name}! They should receive a group text in a few seconds. Have them reply YES/NO or ask a question.</div>`;
+          document.getElementById('demo-msg').innerHTML = `<div class="success-msg">Demo sent to ${esc(name)}! They should receive a group text in a few seconds. Have them reply YES/NO or ask a question.</div>`;
           document.getElementById('demo-name').value = '';
           document.getElementById('demo-phone').value = '';
         } else {
