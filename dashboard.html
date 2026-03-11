@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Barnabas AI Dashboard — Farragut Christian Church</title>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Libre Franklin', sans-serif; background: #0F172A; color: #E2E8F0; min-height: 100vh; }
@@ -102,6 +103,19 @@
     .success-msg { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 10px 14px; color: #10B981; font-size: 13px; margin-bottom: 16px; }
     .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 10px 14px; color: #FCA5A5; font-size: 13px; margin-bottom: 16px; }
     
+    /* Login screen */
+    .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .login-card { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; text-align: center; }
+    .login-card .header-logo { margin: 0 auto 16px; }
+    .login-card h2 { font-family: 'Playfair Display', serif; font-size: 24px; color: #FFF; margin-bottom: 4px; }
+    .login-card .subtitle { color: #64748B; font-size: 13px; margin-bottom: 28px; }
+    .login-card .form-group { text-align: left; }
+    .login-card .btn-primary { width: 100%; padding: 12px; margin-top: 8px; }
+    #login-error { display: none; margin-top: 12px; }
+    .dashboard-wrap { display: none; }
+    .logout-btn { background: rgba(239,68,68,0.1); color: #EF4444; border: 1px solid rgba(239,68,68,0.3); padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
     @media (max-width: 640px) {
       .form-row { grid-template-columns: 1fr; }
       .content { padding: 16px; }
@@ -110,6 +124,28 @@
   </style>
 </head>
 <body>
+  <!-- Login Screen -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-card">
+      <div class="header-logo" style="width:56px;height:56px;font-size:22px;">BA</div>
+      <h2>Barnabas Dashboard</h2>
+      <div class="subtitle">Farragut Christian Church — Sign in to continue</div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="login-email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="login-password" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()" id="login-btn">Sign In</button>
+      <div class="error-msg" id="login-error"></div>
+    </div>
+  </div>
+
+  <!-- Dashboard (hidden until authenticated) -->
+  <div class="dashboard-wrap" id="dashboard-wrap">
+
   <!-- Header -->
   <div class="header">
     <div class="header-left">
@@ -119,6 +155,7 @@
         <div class="church">Farragut Christian Church</div>
       </div>
     </div>
+    <button class="logout-btn" onclick="doLogout()">Sign Out</button>
   </div>
 
   <!-- Tabs -->
@@ -205,11 +242,73 @@
     <div class="modal" id="modal-content"></div>
   </div>
 
+  </div><!-- end dashboard-wrap -->
+
   <script>
     const SB_URL = "https://ehkfjlvufxrwtkomcqur.supabase.co";
     const SB_KEY = "sb_publishable_t6zQrTT9Iina7KR_JteD2w_DBnZ1zeZ";
     const DEMO_WEBHOOK = "https://chickendog.app.n8n.cloud/webhook/ai-ben-demo";
+
+    const supabase = window.supabase.createClient(SB_URL, SB_KEY);
+    let authToken = SB_KEY;
     const headers = { "apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Content-Type": "application/json", "Prefer": "return=representation" };
+
+    function updateAuthHeaders(token) {
+      authToken = token;
+      headers["Authorization"] = "Bearer " + token;
+    }
+
+    // ========= AUTH =========
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        updateAuthHeaders(session.access_token);
+        showDashboard();
+      }
+    }
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!email || !password) {
+        showLoginError('Please enter your email and password.');
+        return;
+      }
+      document.getElementById('login-btn').textContent = 'Signing in...';
+      document.getElementById('login-btn').disabled = true;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      document.getElementById('login-btn').textContent = 'Sign In';
+      document.getElementById('login-btn').disabled = false;
+      if (error) {
+        showLoginError(error.message);
+        return;
+      }
+      updateAuthHeaders(data.session.access_token);
+      showDashboard();
+    }
+    async function doLogout() {
+      await supabase.auth.signOut();
+      updateAuthHeaders(SB_KEY);
+      document.getElementById('dashboard-wrap').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+    function showLoginError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function showDashboard() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard-wrap').style.display = 'block';
+      loadSchedule();
+      loadContacts();
+    }
+
+    // Listen for token refresh
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        updateAuthHeaders(session.access_token);
+      }
+    });
 
     let scheduleData = [], contactsData = [], messagesData = [], knowledgeData = [];
     let activeMonth = "All";
@@ -583,8 +682,7 @@
     document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 
     // ========= INIT =========
-    loadSchedule();
-    loadContacts();
+    checkAuth();
   </script>
 </body>
 </html>
