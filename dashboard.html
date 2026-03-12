@@ -222,7 +222,7 @@
       <div class="card demo-card">
         <div class="card-title" style="margin-bottom:12px;">Send Barnabas Demo</div>
         <p style="color:#64748B;font-size:13px;line-height:1.5;margin-bottom:20px;">
-          Enter a name and phone number. Barnabas will create a group text conversation — perfect for showing off the system.
+          Enter a name and phone number. Barnabas will create a group text conversation — perfect for showing off the system. Try declining a task, asking about church events, or checking your schedule. Barnabas uses real church info and simulates personal data.
         </p>
         <div id="demo-msg"></div>
         <div class="form-group">
@@ -589,33 +589,46 @@
     }
     function renderKnowledgeStats() {
       const cats = new Set(knowledgeData.map(k => k.category)).size;
+      const pub = knowledgeData.filter(k => k.visibility !== 'private').length;
+      const priv = knowledgeData.filter(k => k.visibility === 'private').length;
       document.getElementById('knowledge-stats').innerHTML = `
         <div class="stat"><div class="stat-value">${knowledgeData.length}</div><div class="stat-label">Entries</div></div>
         <div class="stat"><div class="stat-value">${cats}</div><div class="stat-label">Categories</div></div>
+        <div class="stat"><div class="stat-value">${pub}</div><div class="stat-label">Public</div></div>
+        <div class="stat"><div class="stat-value">${priv}</div><div class="stat-label">Private</div></div>
       `;
     }
     function renderKnowledge() {
       const q = (document.getElementById('knowledge-search')?.value || '').toLowerCase();
       const filtered = knowledgeData.filter(k => k.category.toLowerCase().includes(q) || k.content.toLowerCase().includes(q));
       if (!filtered.length) { document.getElementById('knowledge-list').innerHTML = '<p style="color:#64748B;text-align:center;padding:40px;">No entries found.</p>'; return; }
-      document.getElementById('knowledge-list').innerHTML = filtered.map(k => `
+      document.getElementById('knowledge-list').innerHTML = filtered.map(k => {
+        const visBadge = k.visibility === 'private'
+          ? '<span class="badge badge-red" style="margin-left:6px">Private</span>'
+          : '<span class="badge badge-green" style="margin-left:6px">Public</span>';
+        return `
         <div class="card" style="border-left:3px solid ${catColor(k.category)==='yellow'?'#F59E0B':catColor(k.category)==='blue'?'#3B82F6':catColor(k.category)==='green'?'#10B981':catColor(k.category)==='red'?'#EF4444':'#64748B'}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-            <span class="badge badge-${catColor(k.category)}">${esc(catLabel(k.category))}</span>
+            <div><span class="badge badge-${catColor(k.category)}">${esc(catLabel(k.category))}</span>${visBadge}</div>
             <div style="display:flex;gap:6px">
               <button class="btn btn-sm btn-edit" onclick="showEditKnowledge(${parseInt(k.id)})">Edit</button>
               <button class="btn btn-sm btn-delete" onclick="deleteKnowledge(${parseInt(k.id)})">Del</button>
             </div>
           </div>
           <p style="font-size:13px;line-height:1.6;color:#CBD5E1">${esc(k.content)}</p>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     }
+    const PRIVATE_CATEGORIES = ['volunteer_procedures', 'ai_ben_rules', 'app'];
+    function defaultVisibility(cat) { return PRIVATE_CATEGORIES.includes(cat) ? 'private' : 'public'; }
     function showAddKnowledge() {
       const opts = CATEGORIES.map(c => `<option value="${c}">${catLabel(c)}</option>`).join('');
       document.getElementById('modal-content').innerHTML = `
         <h3>Teach Barnabas</h3>
-        <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-cat">${opts}</select></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-cat" onchange="document.getElementById('m-vis').value=defaultVisibility(this.value)">${opts}</select></div>
+          <div class="form-group"><label class="form-label">Visibility</label><select class="form-select" id="m-vis"><option value="public">Public (website safe)</option><option value="private">Private (SMS only)</option></select></div>
+        </div>
         <div class="form-group"><label class="form-label">What should Barnabas know?</label><textarea class="form-textarea" id="m-content" rows="5" placeholder="Write naturally, like explaining to a new volunteer..."></textarea></div>
         <div class="form-actions">
           <button class="btn btn-save" onclick="addKnowledge()">Add</button>
@@ -626,9 +639,13 @@
     function showEditKnowledge(id) {
       const k = knowledgeData.find(x => x.id === id);
       const opts = CATEGORIES.map(c => `<option value="${c}" ${c===k.category?'selected':''}>${catLabel(c)}</option>`).join('');
+      const vis = k.visibility || 'public';
       document.getElementById('modal-content').innerHTML = `
         <h3>Edit Entry</h3>
-        <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-cat">${opts}</select></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Category</label><select class="form-select" id="m-cat">${opts}</select></div>
+          <div class="form-group"><label class="form-label">Visibility</label><select class="form-select" id="m-vis"><option value="public" ${vis==='public'?'selected':''}>Public (website safe)</option><option value="private" ${vis==='private'?'selected':''}>Private (SMS only)</option></select></div>
+        </div>
         <div class="form-group"><label class="form-label">Content</label><textarea class="form-textarea" id="m-content" rows="5">${esc(k.content)}</textarea></div>
         <div class="form-actions">
           <button class="btn btn-save" onclick="updateKnowledge(${id})">Save</button>
@@ -637,11 +654,11 @@
       openModal();
     }
     async function addKnowledge() {
-      await sbPost('church_knowledge', { category: document.getElementById('m-cat').value, content: document.getElementById('m-content').value });
+      await sbPost('church_knowledge', { category: document.getElementById('m-cat').value, content: document.getElementById('m-content').value, visibility: document.getElementById('m-vis').value });
       closeModal(); loadKnowledge();
     }
     async function updateKnowledge(id) {
-      await sbPatch('church_knowledge', id, { category: document.getElementById('m-cat').value, content: document.getElementById('m-content').value, last_updated: new Date().toISOString() });
+      await sbPatch('church_knowledge', id, { category: document.getElementById('m-cat').value, content: document.getElementById('m-content').value, visibility: document.getElementById('m-vis').value, last_updated: new Date().toISOString() });
       closeModal(); loadKnowledge();
     }
     async function deleteKnowledge(id) {
@@ -669,7 +686,7 @@
       try {
         const res = await fetch(DEMO_WEBHOOK, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({firstName:name, phone:phone}) });
         if (res.ok) {
-          document.getElementById('demo-msg').innerHTML = `<div class="success-msg">Demo sent to ${esc(name)}! They should receive a group text in a few seconds. Have them reply YES/NO or ask a question.</div>`;
+          document.getElementById('demo-msg').innerHTML = `<div class="success-msg">Demo sent to ${esc(name)}! They should receive a group text in a few seconds. Try: reply YES/NO, decline a specific task, ask about church events, or ask "When am I scheduled next?"</div>`;
           document.getElementById('demo-name').value = '';
           document.getElementById('demo-phone').value = '';
         } else {
