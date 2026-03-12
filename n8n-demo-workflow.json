@@ -1,0 +1,547 @@
+{
+  "name": "AI Ben Demo (with Cleanup)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-ben-demo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Demo Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "ai-ben-demo"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"firstName\": \"{{ $json.body.firstName }}\",\n  \"phone\": \"{{ $json.body.phone }}\",\n  \"barnabasNumber\": \"+18653550026\",\n  \"benNumber\": \"+18654220717\",\n  \"friendlyName\": \"Demo-{{ $json.body.firstName }}-{{ $now.toMillis() }}\"\n}",
+        "options": {}
+      },
+      "id": "node-prepare",
+      "name": "Prepare Demo Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://conversations.twilio.com/v1/ParticipantConversations?Address={{ $json.barnabasNumber }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-list-convos",
+      "name": "List Barnabas Conversations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-has-convos",
+              "leftValue": "={{ $json.conversations }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-if-convos",
+      "name": "Has Old Conversations?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "conversations",
+        "options": {}
+      },
+      "id": "node-split",
+      "name": "Split Conversations",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $json.conversation_sid }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "State",
+              "value": "closed"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 500
+            }
+          },
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-close-convo",
+      "name": "Close Old Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -100],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $json.sid }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-delete-convo",
+      "name": "Delete Old Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -100],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://conversations.twilio.com/v1/Conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "FriendlyName",
+              "value": "={{ $('Prepare Demo Data').item.json.friendlyName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-create-convo",
+      "name": "Create Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"conversationSid\": \"{{ $json.sid }}\",\n  \"firstName\": \"{{ $('Prepare Demo Data').item.json.firstName }}\",\n  \"phone\": \"{{ $('Prepare Demo Data').item.json.phone }}\",\n  \"barnabasNumber\": \"{{ $('Prepare Demo Data').item.json.barnabasNumber }}\",\n  \"benNumber\": \"{{ $('Prepare Demo Data').item.json.benNumber }}\"\n}",
+        "options": {}
+      },
+      "id": "node-prepare-sids",
+      "name": "Prepare SIDs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1760, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $json.conversationSid }}/Participants",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "MessagingBinding.Address",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "MessagingBinding.ProxyAddress",
+              "value": "={{ $json.barnabasNumber }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-add-demo-person",
+      "name": "Add Demo Person",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $json.conversationSid }}/Participants",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "MessagingBinding.Address",
+              "value": "={{ $('Prepare SIDs').item.json.benNumber }}"
+            },
+            {
+              "name": "MessagingBinding.ProxyAddress",
+              "value": "={{ $('Prepare SIDs').item.json.barnabasNumber }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-add-ben",
+      "name": "Add Ben",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $('Prepare SIDs').item.json.conversationSid }}/Participants",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Identity",
+              "value": "barnabas-ai"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-add-barnabas",
+      "name": "Add Barnabas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2420, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $('Prepare SIDs').item.json.conversationSid }}/Messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "Author",
+              "value": "barnabas-ai"
+            },
+            {
+              "name": "Body",
+              "value": "=Hey {{ $('Prepare SIDs').item.json.firstName }}! This is Barnabas AI from Faith Community Church. I'm here to help answer any questions you have. How can I help you today?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-send-msg",
+      "name": "Send Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ehkfjlvufxrwtkomcqur.supabase.co/rest/v1/message_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"conversation_sid\": \"{{ $('Prepare SIDs').item.json.conversationSid }}\",\n  \"direction\": \"outbound\",\n  \"from_number\": \"barnabas-ai\",\n  \"to_number\": \"{{ $('Prepare SIDs').item.json.phone }}\",\n  \"body\": \"Hey {{ $('Prepare SIDs').item.json.firstName }}! This is Barnabas AI from Faith Community Church. I'm here to help answer any questions you have. How can I help you today?\",\n  \"status\": \"sent\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-log-supabase",
+      "name": "Log to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Supabase API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"conversationSid\": \"{{ $('Prepare SIDs').item.json.conversationSid }}\" }",
+        "options": {}
+      },
+      "id": "node-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3080, 0]
+    }
+  ],
+  "connections": {
+    "Demo Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Demo Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Demo Data": {
+      "main": [
+        [
+          {
+            "node": "List Barnabas Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Barnabas Conversations": {
+      "main": [
+        [
+          {
+            "node": "Has Old Conversations?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Old Conversations?": {
+      "main": [
+        [
+          {
+            "node": "Split Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Conversations": {
+      "main": [
+        [
+          {
+            "node": "Close Old Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Close Old Conversation": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Old Conversation": {
+      "main": [
+        [
+          {
+            "node": "Create Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Conversation": {
+      "main": [
+        [
+          {
+            "node": "Prepare SIDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare SIDs": {
+      "main": [
+        [
+          {
+            "node": "Add Demo Person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Demo Person": {
+      "main": [
+        [
+          {
+            "node": "Add Ben",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Ben": {
+      "main": [
+        [
+          {
+            "node": "Add Barnabas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Barnabas": {
+      "main": [
+        [
+          {
+            "node": "Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Message": {
+      "main": [
+        [
+          {
+            "node": "Log to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
