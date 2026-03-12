@@ -1,0 +1,115 @@
+{
+  "name": "DELETE All Conversations (One-Time Cleanup)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://conversations.twilio.com/v1/Conversations?PageSize=50",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "id": "node-list",
+      "name": "List All Conversations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "conversations",
+        "options": {}
+      },
+      "id": "node-split",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $json.sid }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 500
+            }
+          },
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "node-delete",
+      "name": "Delete Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "List All Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List All Conversations": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Delete Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
