@@ -206,7 +206,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $json.conversationSid }}/Participants",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $('Prepare SIDs').item.json.conversationSid }}/Participants",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
@@ -215,11 +215,11 @@
           "parameters": [
             {
               "name": "MessagingBinding.Address",
-              "value": "={{ $json.phone }}"
+              "value": "={{ $('Prepare SIDs').item.json.phone }}"
             },
             {
               "name": "MessagingBinding.ProxyAddress",
-              "value": "={{ $json.barnabasNumber }}"
+              "value": "={{ $('Prepare SIDs').item.json.barnabasNumber }}"
             }
           ]
         },
@@ -240,7 +240,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $json.conversationSid }}/Participants",
+        "url": "=https://conversations.twilio.com/v1/Conversations/{{ $('Prepare SIDs').item.json.conversationSid }}/Participants",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
