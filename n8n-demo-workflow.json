@@ -317,7 +317,7 @@
             },
             {
               "name": "Body",
-              "value": "=Hey {{ $('Prepare SIDs').item.json.firstName }}! This is Barnabas AI from Faith Community Church. I'm here to help answer any questions you have. How can I help you today?"
+              "value": "=Hey {{ $('Prepare SIDs').item.json.firstName }}! This is Barnabas AI from Farragut Christian Church. I am helping Ben Sealey with scheduling opening the church, first hour attendant, and second hour attendant. I have you down for serving this Sunday. Are you good to go? Ben is on this group text as well"
             }
           ]
         },
@@ -343,7 +343,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"conversation_sid\": \"{{ $('Prepare SIDs').item.json.conversationSid }}\",\n  \"direction\": \"outbound\",\n  \"from_number\": \"barnabas-ai\",\n  \"to_number\": \"{{ $('Prepare SIDs').item.json.phone }}\",\n  \"body\": \"Hey {{ $('Prepare SIDs').item.json.firstName }}! This is Barnabas AI from Faith Community Church. I'm here to help answer any questions you have. How can I help you today?\",\n  \"status\": \"sent\"\n}",
+        "jsonBody": "={\n  \"conversation_sid\": \"{{ $('Prepare SIDs').item.json.conversationSid }}\",\n  \"direction\": \"outbound\",\n  \"from_number\": \"barnabas-ai\",\n  \"to_number\": \"{{ $('Prepare SIDs').item.json.phone }}\",\n  \"body\": \"Hey {{ $('Prepare SIDs').item.json.firstName }}! This is Barnabas AI from Farragut Christian Church. I am helping Ben Sealey with scheduling opening the church, first hour attendant, and second hour attendant. I have you down for serving this Sunday. Are you good to go? Ben is on this group text as well\",\n  \"status\": \"sent\"\n}",
         "options": {
           "response": {
             "response": {
