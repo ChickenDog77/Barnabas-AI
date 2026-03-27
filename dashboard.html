@@ -103,6 +103,17 @@
     .success-msg { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 10px 14px; color: #10B981; font-size: 13px; margin-bottom: 16px; }
     .error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 10px 14px; color: #FCA5A5; font-size: 13px; margin-bottom: 16px; }
     
+    /* Go Live toggle */
+    .go-live-wrap { display: flex; align-items: center; gap: 10px; }
+    .go-live-label { font-size: 12px; font-weight: 600; color: #64748B; }
+    .go-live-label.active { color: #10B981; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #334155; border-radius: 24px; transition: 0.3s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+    .toggle input:checked + .toggle-slider { background: #10B981; }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
     /* Login screen */
     .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
     .login-card { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; text-align: center; }
@@ -155,7 +166,14 @@
         <div class="church">Farragut Christian Church</div>
       </div>
     </div>
-    <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    <div class="go-live-wrap">
+      <span class="go-live-label" id="go-live-label">Reminders Off</span>
+      <label class="toggle">
+        <input type="checkbox" id="go-live-toggle" onchange="toggleReminders()">
+        <span class="toggle-slider"></span>
+      </label>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
   </div>
 
   <!-- Tabs -->
@@ -306,6 +324,7 @@
       document.getElementById('dashboard-wrap').style.display = 'block';
       loadSchedule();
       loadContacts();
+      loadGoLiveSetting();
     }
 
     // Listen for token refresh
@@ -706,6 +725,32 @@
     function openModal() { document.getElementById('modal').classList.add('show'); }
     function closeModal() { document.getElementById('modal').classList.remove('show'); }
     document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+    // ========= GO LIVE TOGGLE =========
+    async function loadGoLiveSetting() {
+      const data = await sbGet('app_settings', 'key=eq.reminders_active&select=value');
+      const isActive = Array.isArray(data) && data[0]?.value === 'true';
+      document.getElementById('go-live-toggle').checked = isActive;
+      updateGoLiveLabel(isActive);
+    }
+    function updateGoLiveLabel(isActive) {
+      const label = document.getElementById('go-live-label');
+      label.textContent = isActive ? 'Reminders ON' : 'Reminders Off';
+      label.className = 'go-live-label' + (isActive ? ' active' : '');
+    }
+    async function toggleReminders() {
+      const isActive = document.getElementById('go-live-toggle').checked;
+      if (isActive && !confirm('Turn ON automated Friday reminders? Barnabas will start texting volunteers every Friday at 6 PM.')) {
+        document.getElementById('go-live-toggle').checked = false;
+        return;
+      }
+      updateGoLiveLabel(isActive);
+      await fetch(`${SB_URL}/rest/v1/app_settings?key=eq.reminders_active`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ value: isActive ? 'true' : 'false', updated_at: new Date().toISOString() })
+      });
+    }
 
     // ========= INIT =========
     checkAuth();
