@@ -211,8 +211,12 @@
       <div class="stats" id="knowledge-stats"></div>
       <div class="search-bar">
         <input type="text" class="form-input" placeholder="Search knowledge base..." id="knowledge-search" oninput="renderKnowledge()">
-        <button class="btn btn-primary" onclick="showAddKnowledge()">+ Teach Barnabas</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="showAddKnowledge()">+ Teach Barnabas</button>
+          <button class="btn btn-edit" id="sync-btn" onclick="syncEnews()">⟳ Sync E-News</button>
+        </div>
       </div>
+      <div id="sync-msg"></div>
       <div id="knowledge-list"><div class="loading">Loading knowledge base...</div></div>
     </div>
 
@@ -247,7 +251,8 @@
   <script>
     const SB_URL = "https://ehkfjlvufxrwtkomcqur.supabase.co";
     const SB_KEY = "sb_publishable_t6zQrTT9Iina7KR_JteD2w_DBnZ1zeZ";
-    const DEMO_WEBHOOK = "https://chickendog.app.n8n.cloud/webhook/ai-ben-demo";
+    const DEMO_WEBHOOK = "https://ehkfjlvufxrwtkomcqur.supabase.co/functions/v1/barnabas-demo";
+    const SYNC_ENEWS_WEBHOOK = "https://ehkfjlvufxrwtkomcqur.supabase.co/functions/v1/barnabas-sync-enews";
 
     const sbClient = window.supabase.createClient(SB_URL, SB_KEY);
     let authToken = SB_KEY;
@@ -570,7 +575,7 @@
     }
 
     // ========= KNOWLEDGE =========
-    const CATEGORIES = ['general','sunday_schedule','first_visit','worship_style','youth','kids','online','ministries','volunteer_duties','volunteer_procedures','app','contact','events','ai_ben_rules','custom'];
+    const CATEGORIES = ['general','sunday_schedule','first_visit','worship_style','youth','kids','online','ministries','volunteer_duties','volunteer_procedures','app','contact','events','announcements','volunteer','ai_ben_rules','custom'];
     function catLabel(c) { return c.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase()); }
     function catColor(c) {
       const m = {general:'yellow',sunday_schedule:'blue',first_visit:'green',worship_style:'blue',youth:'yellow',kids:'yellow',volunteer_duties:'red',volunteer_procedures:'red',ai_ben_rules:'green',events:'blue',contact:'gray'};
@@ -643,6 +648,27 @@
       await sbDelete('church_knowledge', id);
       loadKnowledge();
     }
+    async function syncEnews() {
+      const btn = document.getElementById('sync-btn');
+      const msg = document.getElementById('sync-msg');
+      btn.textContent = '⟳ Syncing...';
+      btn.disabled = true;
+      msg.innerHTML = '';
+      try {
+        const res = await fetch(SYNC_ENEWS_WEBHOOK, { method: 'POST', headers: {'Content-Type':'application/json'} });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+          msg.innerHTML = `<div class="success-msg">Synced ${data.inserted} entries from FCC e-news.</div>`;
+          loadKnowledge();
+        } else {
+          msg.innerHTML = `<div class="error-msg">Sync failed: ${data.message || 'Unknown error'}</div>`;
+        }
+      } catch(e) {
+        msg.innerHTML = `<div class="error-msg">Could not reach sync function: ${e.message}</div>`;
+      }
+      btn.textContent = '⟳ Sync E-News';
+      btn.disabled = false;
+    }
 
     // ========= DEMO =========
     function formatPhoneField(input) {
@@ -667,10 +693,10 @@
           document.getElementById('demo-name').value = '';
           document.getElementById('demo-phone').value = '';
         } else {
-          document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Something went wrong. Check that the demo workflow is active in n8n.</div>';
+          document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Something went wrong. Check the Supabase function logs.</div>';
         }
       } catch(e) {
-        document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Could not reach n8n. Check your connection.</div>';
+        document.getElementById('demo-msg').innerHTML = '<div class="error-msg">Could not reach the demo function: ' + e.message + '</div>';
       }
       document.getElementById('demo-btn').textContent = 'Send Barnabas Demo';
       document.getElementById('demo-btn').disabled = false;
